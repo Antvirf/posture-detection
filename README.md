@@ -1,6 +1,6 @@
 # posture-detection
 # Antti's notes
-Have had the idea to do this for a long time, and found a good start from dcstang's repo based on openCV. Their code implemented facial recognition based on the webcam, and what I built on top of that was simply:
+Have had the idea to do this for a long time, and found a good start from dcstang's repo based on openCV. Their code implemented facial recognition based on the webcam, and the 'first pass' built directly on top of that. The 'second pass' saw a change of apprach/library to Mediapipe, which allows more precise tracking of body parts for future developments.
 
 ## First pass (now in main_depr.py)
 * Computing 'area' of the face detected, simply taking the width/height of the rectangle
@@ -17,7 +17,6 @@ Current setup includes:
 
 ### To-do
 * Addition of scaling to the PostureCriteria, or finding a better way to track head rotation instead of nose-shoulder separation
-
 
 
 ## Original Author
