@@ -1,36 +1,21 @@
 # posture-detection
 Detecting Sitting Posture via webcam and Improving habits with Python
 
-## Idea
-
-Sitting posture is an important habit to develop early and can add up over the years. My wife tells me that I have a golumn like hunch when I am coding and I wanted to improve on this. I wanted to improve my sitting posture while working on my laptop, so this project will need to achieve a few things:
-
-1. Get access to laptop webcam
-2. Develop posture and face recognition
-3. Record the number of times off posture 
-4. Develop a way to remind to user to rectify their posture
-5. Analyze the improvements over time
-
-## Getting Started / Prerequisites
-
-To run this script you will need python or conda installed
+# Antti notes
+Have had the idea to do this for a long time, and found a good start from dcstang's repo based on openCV. Their code implemented facial recognition based on the webcam, and what I built on top of that was simply:
+* Computing 'area' of the face detected, simply taking the width/height of the rectangle
+* Slouching is simply defined as whenthe currently detected area > threshold area, i.e. if the user's face is larger (=closer) to the camera than before
+* 'Calibrating' the threshold area over the first few seconds the program is ran, by asking the user to slouch at the start
+* 'Monitoring', alerting the user via macOS alert + sound if the limit is consecutively breached for over 3 seconds
 
 
-## Built With
+# Potential to-do
+* Head rotation alerts - it is possible to sit far back and have head tilted down, which is still bad posture
+* Shoulder-based alerts - ensure shoulders are kept back, perhaps by measuring distance between shoulders scaled to width of the face
 
-* [Jupyter Notebook](https://jupyter.org/) - IDE and Python intepreter
-* [Atom](https://ide.atom.io/) - IDE and Python intepreter
-* include libraries: 
 
-## Contributing
 
-Feel free to fork this, drop me a message if you want to discuss contribution and be a maintainer!
-
-## Versioning
-
-We use [SemVer](http://semver.org/) for versioning. For the versions available, see the [tags on this repository] 
-
-## Authors
+## Original Author
 
 * dcstang
 
