@@ -7,7 +7,7 @@ Landmark/pose capture still based on Mediapipe, but added a new PostureCriteriaM
 
 Left some debt to the non-ML version where the functions don't work quite the same in all cases and data collection is a bit different.
 
-## Second pass
+## Second pass (now in main_simple.py)
 This iteration is based on Google's mediapipe and loses almost all common elements with the previous code. Instead of alerting based on facial area, it now alerts based on distance between chosen body parts. The selection of criteria can be made with the class of PostureCriteria, where you can specify 2 Mediapipe bodies (as identified by their IDs) to track for each criterion, as well as specify whether a breach is considered going above or below the calibrated value.
 Current setup includes:
 * eye separation: Similar to area from above, can track whether your head moves closer to the screen
