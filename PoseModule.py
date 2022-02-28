@@ -46,6 +46,18 @@ class poseDetector():
                 if draw:
                     cv2.circle(image, (cx, cy), 10, (255, 0, 0), 3)
         return lmList
+
+    def getPositionArrayByIds(self, image, ids):
+        lmList = {}
+        if self.results.pose_landmarks:
+            for id, lm in enumerate(self.results.pose_landmarks.landmark):
+                if id in ids:
+                    tid = str(id)
+                    lmList[tid + '_x'] = lm.x
+                    lmList[tid + '_y'] = lm.y
+                    lmList[tid + '_z'] = lm.z
+                    lmList[tid + '_v'] = lm.visibility
+        return lmList    
     
 
 

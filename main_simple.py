@@ -4,18 +4,6 @@ import os
 import time, math
 import PoseModule as pm
 import logging
-import pickle 
-
-# ML imports
-import pandas as pd
-from sklearn.model_selection import train_test_split
-from sklearn.pipeline import make_pipeline 
-from sklearn.preprocessing import StandardScaler 
-from sklearn.linear_model import LogisticRegression, RidgeClassifier
-from sklearn.ensemble import RandomForestClassifier, GradientBoostingClassifier
-from sklearn.metrics import accuracy_score # Accuracy metrics 
-
-
 
 """
 Mediapipe landmarks of interest, more info on poses at https://google.github.io/mediapipe/solutions/pose.html
@@ -27,6 +15,7 @@ O. nose
 11. left_shoulder
 12. right_shoulder
 """
+
 
 def say_stuff(stuff):
     os.system(
@@ -105,105 +94,33 @@ class PostureCriterion():
             return False
 
 
-class PostureCriterionML(PostureCriterion):
-    def __init__(self, in_name, in_message, in_landmarks):
-        self.name = in_name
-        self.message = in_message
-        self.landmarks = in_landmarks
-        self.calibration_data = [] #list of dicts
-        self.threshold = 0.0
-        self.model = "Model not loaded"
-        self.latest_breach = False
-
-    def read_model(self, path="model.pkl"):
-        with open('model.pkl', 'rb') as f:
-            self.model = pickle.load(f)
-    
-    def calibrate(self):
-        # Training code
-        # Convert data to a df
-        df = pd.DataFrame(self.calibration_data)
-        print(df)
-
-        x = df.drop('pose', axis=1) # input values - everything except pose
-        y = df['pose'] # output value - just the pose
-
-        # Split data to tests, trains
-        x_train, x_test, y_train, y_test = train_test_split(x, y, test_size=0.3, random_state=1234)
-
-        pipelines = {
-            'lr':make_pipeline(StandardScaler(), LogisticRegression()),
-            'rc':make_pipeline(StandardScaler(), RidgeClassifier()),
-            'rf':make_pipeline(StandardScaler(), RandomForestClassifier()),
-            'gb':make_pipeline(StandardScaler(), GradientBoostingClassifier()),
-        }
-        fit_models = {}
-        for algo, pipeline in pipelines.items():
-            model = pipeline.fit(x_train, y_train)
-            fit_models[algo] = model
-        
-        # Test models, pick the best
-        top = 0,
-        for algo, model in fit_models.items():
-            yhat = model.predict(x_test)
-            score = accuracy_score(y_test, yhat)
-            print(algo, score)
-            if score >= top:
-                self.model = model
-                top = score
-
-        # Dump model
-        with open('model.pkl', 'wb') as f:
-            pickle.dump(self.model, f)
-
-
-    def check_breach(self, data, output=False):
-        assert type(data) == type({})
-        df = pd.DataFrame([data])
-
-        # Make prediction based on the model
-        pred = self.model.predict(df)[0]
-        if pred == 'slouch':
-            self.latest_breach = True
-            return True
-        else:
-            self.latest_breach = False
-            return False
-
-    def add_calibration_data(self, data, pose):
-        assert type(data) == type({})
-
-        # Assume data is just a list of all the positions, not filtered - here, we only take the data points for the landmarks we care about
-        data['pose'] = pose
-        # Append new data
-        self.calibration_data.append(data)
-    
-
 if __name__ == '__main__':
     # Taking posedetector component from the PoseModule
     poser = pm.poseDetector()
     
     # Defining posture criteria
     criteria = [
-        PostureCriterionML("ML model", "get back", [0, 2, 5, 11, 12]),
+        PostureCriterion("eye separation", "get back", [2, 5], "above"),
+        PostureCriterion("shoulder separation", "get backs", [11, 12], "above"),
+        PostureCriterion("Nose-Shoulder distance", "heads up", [0, 12], "below")
     ]
 
     # Starting video capture
     cap = cv2.VideoCapture(0)
 
+
     # First loop
-    frame_rate = 5 # Higher FPS for the slouch threshold detection to minimise impact of potential errors/outliers
+    frame_rate = 1 # Higher FPS for the slouch threshold detection to minimise impact of potential errors/outliers
     prev, capture_time = 0, 0
     start_time = time.time()
     thresholds_array = []
     threshold_area = 0
     consecutive_breaches = 0
-    first_calibration = False
-    second_calibration = False
+    calibrated = False
     calibration_period_seconds = 10
 
     try:
-        print("Program started, please slouch for {} seconds to calibrate...".format(calibration_period_seconds))
+        print("Program started, please hold good (but not too good) for {} seconds to calibrate...".format(calibration_period_seconds))
         while True:
             time_elapsed = time.time() - prev
             time_elapsed_total = time.time() - start_time
@@ -211,46 +128,36 @@ if __name__ == '__main__':
 
             # Process and get positions
             img = poser.findPose(img, True)
-            positions = poser.getPositionArrayByIds(img, [15, 16])
+            positions = poser.getPosition(img, False)
             if not positions:
                 continue # Skip if issue
 
 
             # Check whether calibration is complete and should switch to monitoring
-            if time_elapsed_total > calibration_period_seconds and not first_calibration:
+            if time_elapsed_total > calibration_period_seconds and not calibrated:
                 # Compute average
-                print("Slouch calibration complete, please sit up straight")
-
-                # Set flag
-                first_calibration = True
-
-            elif time_elapsed_total > calibration_period_seconds*2 and not second_calibration:
-                # Compute average
-                print("Straight calibration complete, training the model")
+                print("Calibration complete, slouch monitoring active.")
                 
-                # Calibration
+                # Criteria
                 [crit.calibrate() for crit in criteria]
 
                 # Set flag
-                print("Calibration 2 complete, monitoring active")
-                second_calibration = True
-
+                print("Calibration complete")
+                calibrated = True
 
             if time_elapsed > 1./frame_rate:
                 prev = time.time()
-                if not first_calibration: # Calibration ongoing, provide data to each criteria
-                    [crit.add_calibration_data(positions, "slouch") for crit in criteria]
-                elif not second_calibration:
-                    [crit.add_calibration_data(positions, "straight") for crit in criteria]
+                if not calibrated: # Calibration ongoing, provide data to each criteria
+                    [crit.add_calibration_data(positions) for crit in criteria]
 
                 else:
                     # 
                     if any([crit.check_breach(positions) for crit in criteria]):
-                        breaching_criteria = [crit.name for crit in criteria if crit.latest_breach]
+                        breaching_criteria = [crit.name for crit in criteria if crit.check_breach(positions)]
                         print('Breach found due to {}, consecutive:'.format(
                             ", ".join(breaching_criteria)
                         ), consecutive_breaches)
-                        for crit in [crit for crit in criteria if crit.latest_breach]:
+                        for crit in [crit for crit in criteria if crit.check_breach(positions)]:
                             crit.check_breach(positions, True)
 
                         consecutive_breaches +=1
