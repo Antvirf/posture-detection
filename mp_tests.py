@@ -156,7 +156,6 @@ class PostureCriterionML(PostureCriterion):
         with open('model.pkl', 'wb') as f:
             pickle.dump(self.model, f)
 
-
     def check_breach(self, data, output=False):
         assert type(data) == type({})
         df = pd.DataFrame([data])
@@ -192,7 +191,7 @@ if __name__ == '__main__':
     cap = cv2.VideoCapture(0)
 
     # First loop
-    frame_rate = 5 # Higher FPS for the slouch threshold detection to minimise impact of potential errors/outliers
+    frame_rate = 3 # Higher FPS for the slouch threshold detection to minimise impact of potential errors/outliers
     prev, capture_time = 0, 0
     start_time = time.time()
     thresholds_array = []
@@ -200,13 +199,26 @@ if __name__ == '__main__':
     consecutive_breaches = 0
     first_calibration = False
     second_calibration = False
-    calibration_period_seconds = 10
+    calibration_period_seconds = 300
+
+    train = False # If false, only monitor
 
     try:
-        print("Program started, please slouch for {} seconds to calibrate...".format(calibration_period_seconds))
+        if train:
+            print("Program started, please slouch for {} seconds to calibrate...".format(calibration_period_seconds))
+        else:
+            print("Monitoring started.")
+            first_calibration = True
+            second_calibration = True
+            
+            # Load models
+            [crit.read_model() for crit in criteria]
+        
+
         while True:
             time_elapsed = time.time() - prev
             time_elapsed_total = time.time() - start_time
+            #print("\tElapsed:", time_elapsed_total)
             res, img = cap.read()
 
             # Process and get positions
@@ -214,7 +226,9 @@ if __name__ == '__main__':
             positions = poser.getPositionArrayByIds(img, [15, 16])
             if not positions:
                 continue # Skip if issue
+            
 
+            
 
             # Check whether calibration is complete and should switch to monitoring
             if time_elapsed_total > calibration_period_seconds and not first_calibration:
