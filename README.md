@@ -4,7 +4,7 @@ Have had the idea to do this for a long time, and found a good start from dcstan
 
 
 ## Third pass
-Landmark/pose capture still based on Mediapipe, but added a new PostureCriteriaML class inspired by [this  notebook/tutorial](https://github.com/nicknochnack/Body-Language-Decoder/blob/main/Body%20Language%20Decoder%20Tutorial.ipynb). Now, the code runs different ML models, picks the best performing one, and uses that to do predictions instead. Using the current settings, the model's performance in real life use is not yet that great, need to perhaps consider longer periods of training and/or adding more or different landmarks. Left some debt to the non-ML version where the functions don't work quite the same in all cases and data collection is a bit different.
+Landmark/pose capture still based on Mediapipe, but added a new PostureCriteriaML class inspired by [this  notebook/tutorial](https://github.com/nicknochnack/Body-Language-Decoder/blob/main/Body%20Language%20Decoder%20Tutorial.ipynb). Now, the code runs different ML models, picks the best performing one, and uses that to do predictions instead. The breach check was also changed to a 'proportion X of frames slouched over Y seconds' instead of consecutive frames to ensure that a single frame error doesn't reset the counter.
 
 Trained the model at 3 FPS for 5 minutes slouching, 5 minutes sitting straight. The accuracy with my setup is very good at ~97% in test which makes it usable for my case. Note that the model is *probably* dependent on your setup, camera angle, and the physical size of your body - so may not work as well if you take the model as provided.
 

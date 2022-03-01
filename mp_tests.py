@@ -6,6 +6,7 @@ import PoseModule as pm
 import logging
 import pickle 
 
+
 # ML imports
 import pandas as pd
 from sklearn.model_selection import train_test_split
@@ -14,7 +15,6 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.linear_model import LogisticRegression, RidgeClassifier
 from sklearn.ensemble import RandomForestClassifier, GradientBoostingClassifier
 from sklearn.metrics import accuracy_score # Accuracy metrics 
-
 
 
 """
@@ -179,33 +179,38 @@ class PostureCriterionML(PostureCriterion):
     
 
 if __name__ == '__main__':
-    # Taking posedetector component from the PoseModule
+    # Taking posedetector component from the PoseModule and starting video capture
     poser = pm.poseDetector()
-    
+    cap = cv2.VideoCapture(0)
+
     # Defining posture criteria
     criteria = [
         PostureCriterionML("ML model", "get back", [0, 2, 5, 11, 12]),
     ]
 
-    # Starting video capture
-    cap = cv2.VideoCapture(0)
+    # Main Parameters
+    frame_rate = 3    
+    train = False # If false, only monitor. Set to true if you wish to train then model
+    calibration_period_seconds = 300 # If train - how long to calibrate (= how long to spend in each pose to train the model)
 
-    # First loop
-    frame_rate = 3 # Higher FPS for the slouch threshold detection to minimise impact of potential errors/outliers
-    prev, capture_time = 0, 0
-    start_time = time.time()
-    thresholds_array = []
-    threshold_area = 0
-    consecutive_breaches = 0
-    first_calibration = False
-    second_calibration = False
-    calibration_period_seconds = 300
-
-    train = False # If false, only monitor
+    # Breach definition - proportion of breach-frames in a given period
+    duration = 10 # Time window, seconds
+    breach_threshold_percent = 0.5 # The percentage of frames classified as slouching within given time period
+    
 
     try:
+        # Background variables
+        prev, capture_time = 0, 0
+        start_time = time.time()
+
+        # Breach background calculations
+        breach_frames = duration * frame_rate # The number of frames
+        breach_frames_limit = int(breach_frames * float(breach_threshold_percent))
+        cur_breaches = 0
         if train:
             print("Program started, please slouch for {} seconds to calibrate...".format(calibration_period_seconds))
+            first_calibration = False
+            second_calibration = False
         else:
             print("Monitoring started.")
             first_calibration = True
@@ -249,33 +254,36 @@ if __name__ == '__main__':
                 print("Calibration 2 complete, monitoring active")
                 second_calibration = True
 
-
+            # Whether to process a frame or pass, as limited by FPS
             if time_elapsed > 1./frame_rate:
                 prev = time.time()
+                # Calibration
                 if not first_calibration: # Calibration ongoing, provide data to each criteria
                     [crit.add_calibration_data(positions, "slouch") for crit in criteria]
                 elif not second_calibration:
                     [crit.add_calibration_data(positions, "straight") for crit in criteria]
 
+                # Monitoring 
                 else:
                     # 
                     if any([crit.check_breach(positions) for crit in criteria]):
                         breaching_criteria = [crit.name for crit in criteria if crit.latest_breach]
-                        print('Breach found due to {}, consecutive:'.format(
+                        cur_breaches = min(cur_breaches+1, breach_frames_limit+1)
+                        
+                        print('Breach found due to {}, cur_breaches:'.format(
                             ", ".join(breaching_criteria)
-                        ), consecutive_breaches)
-                        for crit in [crit for crit in criteria if crit.latest_breach]:
-                            crit.check_breach(positions, True)
-
-                        consecutive_breaches +=1
-                    else:
-                        consecutive_breaches = 0
+                        ), cur_breaches)
                     
-                    if consecutive_breaches > frame_rate * 3: # Threshold set to 3 seconds
-                        messages = [crit.message for crit in criteria if crit.check_breach(positions)]
-                        output = " and ".join(messages)
-                        #say_stuff(output)
-                        notify("Posture Alert", "Stop slouching", "submarine")
+                        #if False and (consecutive_breaches > frame_rate * 3): # Threshold set to 3 seconds
+                        if cur_breaches > breach_frames_limit:
+                            #messages = [crit.message for crit in criteria if crit.check_breach(positions)]
+                            #output = " and ".join(messages)
+                            #notify("Posture Alert", "Stop slouching", "submarine")
+                            print("\a", end="")
+
+                    else:
+                        cur_breaches = max(0, cur_breaches-1)
+
             
             
     except KeyboardInterrupt:
