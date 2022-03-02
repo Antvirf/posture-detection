@@ -2,6 +2,7 @@ import cv2
 import time
 import mediapipe as mp
 from pprint import pprint
+mp_drawing = mp.solutions.drawing_utils # Drawing helpers
 
 # Following examples from https://www.youtube.com/watch?v=brwgBf6VB0I
 """
@@ -50,6 +51,7 @@ class poseDetector():
     def getPositionArrayByIds(self, image, ids):
         lmList = {}
         if self.results.pose_landmarks:
+            mp_drawing.draw_landmarks(image, self.results.pose_landmarks)
             for id, lm in enumerate(self.results.pose_landmarks.landmark):
                 if id in ids:
                     tid = str(id)
@@ -57,7 +59,9 @@ class poseDetector():
                     lmList[tid + '_y'] = lm.y
                     lmList[tid + '_z'] = lm.z
                     lmList[tid + '_v'] = lm.visibility
-        return lmList    
+        
+
+        return lmList, image
     
 
 

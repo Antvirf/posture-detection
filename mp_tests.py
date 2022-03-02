@@ -1,3 +1,6 @@
+from cgitb import text
+from contextlib import redirect_stderr
+from turtle import position
 import numpy as np
 import cv2
 import os
@@ -5,7 +8,6 @@ import time, math
 import PoseModule as pm
 import logging
 import pickle 
-
 
 # ML imports
 import pandas as pd
@@ -162,12 +164,19 @@ class PostureCriterionML(PostureCriterion):
 
         # Make prediction based on the model
         pred = self.model.predict(df)[0]
+        prob = self.model.predict_proba(df)[0]
+        self.latest_prediction = pred
+        self.latest_prediction_prob = prob
         if pred == 'slouch':
             self.latest_breach = True
             return True
         else:
             self.latest_breach = False
             return False
+    
+    def get_prediction(self):
+        return self.latest_prediction, self.latest_prediction_prob
+
 
     def add_calibration_data(self, data, pose):
         assert type(data) == type({})
@@ -189,7 +198,8 @@ if __name__ == '__main__':
     ]
 
     # Main Parameters
-    frame_rate = 3    
+    frame_rate = 30
+    ignore_fps = False
     train = False # If false, only monitor. Set to true if you wish to train then model
     calibration_period_seconds = 300 # If train - how long to calibrate (= how long to spend in each pose to train the model)
 
@@ -201,12 +211,14 @@ if __name__ == '__main__':
     try:
         # Background variables
         prev, capture_time = 0, 0
+
         start_time = time.time()
 
         # Breach background calculations
         breach_frames = duration * frame_rate # The number of frames
         breach_frames_limit = int(breach_frames * float(breach_threshold_percent))
         cur_breaches = 0
+        print("Breach condition is {} percentage breaches over {} frames.".format(breach_threshold_percent, breach_frames_limit))
         if train:
             print("Program started, please slouch for {} seconds to calibrate...".format(calibration_period_seconds))
             first_calibration = False
@@ -226,9 +238,12 @@ if __name__ == '__main__':
             #print("\tElapsed:", time_elapsed_total)
             res, img = cap.read()
 
+
+
             # Process and get positions
             img = poser.findPose(img, True)
-            positions = poser.getPositionArrayByIds(img, [15, 16])
+            positions, img = poser.getPositionArrayByIds(img, [15, 16])
+
             if not positions:
                 continue # Skip if issue
             
@@ -255,7 +270,7 @@ if __name__ == '__main__':
                 second_calibration = True
 
             # Whether to process a frame or pass, as limited by FPS
-            if time_elapsed > 1./frame_rate:
+            if time_elapsed > 1./frame_rate or not ignore_fps:
                 prev = time.time()
                 # Calibration
                 if not first_calibration: # Calibration ongoing, provide data to each criteria
@@ -265,7 +280,32 @@ if __name__ == '__main__':
 
                 # Monitoring 
                 else:
-                    # 
+                    criteria[0].check_breach(positions)
+                    prediction, probability = criteria[0].get_prediction()
+                    probability = str(round(max(list(probability)), 2))
+                    print(prediction, probability)
+
+                    # Draw prediction on the image
+                    scaler = 2
+                    if prediction == 'straight':
+                        color_tuple = (0, 125, 0)
+                    else:
+                        color_tuple = (0, 0, 125)
+                    text_color = (255, 255, 255)
+
+                    cv2.rectangle(img, (0,0), (250*scaler, 60*scaler), color_tuple, -1)
+                    cv2.putText(img, 'Pose'
+                                , (95*scaler,12*scaler), cv2.FONT_HERSHEY_SIMPLEX, 0.5*scaler, text_color, 1, cv2.LINE_AA)
+                    cv2.putText(img, str(prediction)
+                                , (90*scaler,40*scaler), cv2.FONT_HERSHEY_SIMPLEX, 1*scaler, text_color, 2, cv2.LINE_AA)
+                    
+                    # Display Probability
+                    cv2.putText(img, '%'
+                                , (15*scaler,12*scaler), cv2.FONT_HERSHEY_SIMPLEX, 0.5*scaler, text_color, 1, cv2.LINE_AA)
+                    cv2.putText(img, str(probability)
+                                , (10*scaler,40*scaler), cv2.FONT_HERSHEY_SIMPLEX, 1*scaler, text_color, 2, cv2.LINE_AA)
+
+
                     if any([crit.check_breach(positions) for crit in criteria]):
                         breaching_criteria = [crit.name for crit in criteria if crit.latest_breach]
                         cur_breaches = min(cur_breaches+1, breach_frames_limit+1)
@@ -283,8 +323,11 @@ if __name__ == '__main__':
 
                     else:
                         cur_breaches = max(0, cur_breaches-1)
-
             
+            cv2.imshow('frame',img)
+            if cv2.waitKey(1) & 0xFF == ord('q'):
+                break
+        
             
     except KeyboardInterrupt:
         # When everything done, release the capture
