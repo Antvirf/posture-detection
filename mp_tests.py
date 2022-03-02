@@ -35,7 +35,6 @@ def say_stuff(stuff):
     """say "{}" """.format(stuff)
     )
 
-
 def notify(title, text, sound, sound_only=False):
     if sound_only:
         os.system("afplay /System/Library/Sounds/Submarine.aiff")
@@ -324,7 +323,7 @@ if __name__ == '__main__':
                     else:
                         cur_breaches = max(0, cur_breaches-1)
             
-            cv2.imshow('frame',img)
+            cv2.imshow('Pose detection',img)
             if cv2.waitKey(1) & 0xFF == ord('q'):
                 break
         
