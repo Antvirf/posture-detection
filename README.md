@@ -1,6 +1,6 @@
 # posture-detection
 # Antti's notes
-Have had the idea to do this for a long time, and found a good start from dcstang's repo based on openCV. Their code implemented facial recognition based on the webcam, and the 'first pass' built directly on top of that. The 'second pass' saw a change of apprach/library to Mediapipe, which allows more precise tracking of body parts for future developments.
+Have had the idea to do this for a long time, and found a good start from dcstang's repo based on openCV. Since that initial fork, I have changed the approach from haarcascade (detecting a face) to Mediapipe (detecting body landmarks) and implemented an ML model to classify the detected pose as either straight/slouching with the appropriate alerts in case of the latter.
 
 # Installation/usage
 As a basic pre-requisite, run this on a recent macOS. It would be best to have [anaconda/conda](https://docs.anaconda.com/anaconda/install/mac-os/) installed for package management.
