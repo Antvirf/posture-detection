@@ -2,12 +2,15 @@
 Have had the idea to do this for a long time, and found a good start from dcstang's repo based on openCV. Since that initial fork, I have changed the approach from haarcascade (detecting a face) to Mediapipe (detecting body landmarks) and implemented an ML model to classify the detected pose as either straight/slouching with the appropriate alerts in case of the latter.
 
 # Installation/usage
-As a basic pre-requisite, run this on a recent macOS. It would be best to have [anaconda/conda](https://docs.anaconda.com/anaconda/install/mac-os/) installed for package management.
+As a basic pre-requisite, run this on a recent macOS. It would be best to have [anaconda/conda](https://docs.anaconda.com/anaconda/install/mac-os/) installed for package management. Open a terminal and cd to a directory of your choice, then follow the instructions below.
 
     # Install required packages
     pip install numpy pandas opencv-python mediapipe
     
-    # Once installation is complete, execute the script of your choice
+    # Clone the repo
+    git clone https://github.com/Antvirf/posture-detection
+    
+    # Once installation is complete, run the code
     python main.py
 
 ## Latest version
