@@ -1,4 +1,7 @@
-# Webcam-based slouch detection - Antti notes
+# Webcam-based slouch detection
+[![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=Antvirf_posture-detection&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=Antvirf_posture-detection)
+[![CodeQL](https://github.com/Antvirf/posture-detection/actions/workflows/codeql.yml/badge.svg)](https://github.com/Antvirf/posture-detection/actions/workflows/codeql.yml)
+
 Have had the idea to do this for a long time, and found a good start from dcstang's repo based on openCV. Since that initial fork, I have changed the approach from haarcascade (detecting a face) to Mediapipe (detecting body landmarks) and implemented an ML model to classify the detected pose as either straight/slouching with the appropriate alerts in case of the latter.
 
 # Installation/usage
